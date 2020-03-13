@@ -1,133 +1,110 @@
 # Simple HTTP server implementation for token-based authentication
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import re
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from RequestHandler import RequestHandler
 
 class AuthServer(BaseHTTPRequestHandler):
 
+    def __init__(self, request, client_address, server):
+        self.requestHandler = RequestHandler()
+        BaseHTTPRequestHandler.__init__(self, request, client_address, server)
+        
+    
     # Request Handler Methods
 
     def do_POST(self):
-        # Parse the JSON input
-        raw_data = self.rfile.read(int(self.headers['Content-Length']))
-        print("Received from client: " + str(raw_data))
-        
-        input = {}
-        try: 
-            input = json.loads(raw_data)
-        except:
-            self.reply_400("Invalid JSON received")
-            return
+        input = self.parse_input()
 
         # Handle the given command
         if self.path == '/register':
-            # Validate inputs
-            if not ('name' in input and 'email' in input and self.validate_email(input['email']) and 'password' in input and self.validate_password(input['password'])):
-                self.reply_400("Missing or invalid input provided for registration")
-                return
-
-            # Create the new user
             try:
-                print('Registering user ' + input['email'])
-                if input['email'] == 'bad@bad.bad':
-                    raise Exception
-            except:
-                self.reply_400('Failed to register user')
-                return
+                # Get, validate the input
+                name = self.get_name(input)
+                email = self.get_email(input)
+                password = self.get_password(input)
 
-            # Generate response
-            self.reply_200(None)
+                # Create a new user
+                print('Registering user ' + email)
+                self.requestHandler.registration_handler(name, email, password)
+                
+                # Generate reply
+                self.reply_200(None)
+
+            except Exception as e:
+                self.reply_400(e.args[0])
 
         elif self.path == '/login':
-            # Validate inputs
-            if not ('email' in input and self.validate_email(input['email']) and 'password' in input and self.validate_password(input['password'])):
-                self.reply_400("Missing or invalid input provided for login")
-                return
-
-            # Login the user
             try:
-                print('Logging in user ' + input['email'])
-                if input['email'] == 'bad@bad.bad':
-                    raise Exception
-                token = 'token'
-            except:
-                self.reply_400('Failed to log in user')
-                return
+                # Get, validate the input
+                email = self.get_email(input)
+                password = self.get_password(input)
 
-            # Generate response
-            self.reply_200({ 'token' : token })
+                # Login the user
+                print('Logging in user ' + email)
+                token = self.requestHandler.login_handler(email, password)
+
+                # Generate reply
+                self.reply_200({ 'token' : token })
+
+            except Exception as e:
+                self.reply_400(e.args[0])
 
         elif self.path == '/logout':
-            # Validate inputs
-            if not 'token' in input:
-                self.reply_400("Missing token for logout")
-                return
-
-            # Log out the user
             try:
-                print('Logging out user with token ' + input['token'])
-                if input['token'] == 'bad':
-                    raise Exception
-            except:
-                self.reply_400('Failed to log out user')
-                return
+                # Get, validate the input
+                token = self.get_token(input)
 
-            # Generate response
-            self.reply_200(None)
+                # Logout the user
+                print('Logging out user with token ' + token)
+                self.requestHandler.logout_handler(token)
+
+                # Generate reply
+                self.reply_200(None)
+
+            except Exception as e:
+                self.reply_400(e.args[0])
         
         elif self.path == '/update':
-            # Validate inputs
-            if not 'token' in input or ('email' in input and not self.validate_email(input['email'])) or ('password' in input and not self.validate_password(input['password'])):
-                self.reply_400("Missing or invalid input provided for registration")
-                return
-
-            # Update the user
             try:
-                print('Updating user with token ' + input['token'])
-                if input['token'] == 'bad':
-                    raise Exception
-                token = 'token2'
-            except:
-                self.reply_400('Failed to update user')
-                return
+                # Get, validate the input
+                name = self.get_name(input, False)
+                email = self.get_email(input, False)
+                password = self.get_password(input, False)
+                token = self.get_token(input)
 
-            # Generate response
-            self.reply_200({ 'token' : token })
+                # Update the user
+                print('Updating user with token ' + token)
+                token = self.requestHandler.update_handler(name, email, password, token)
+                
+                # Generate reply
+                self.reply_200({ 'token' : token })
+
+            except Exception as e:
+                self.reply_400(e.args[0])
         
         else:
             self.reply_404()
             
     def do_DELETE(self):
-        # Parse the JSON input
-        raw_data = self.rfile.read(int(self.headers['Content-Length']))
-        print("Received from client: " + str(raw_data))
-        
-        input = {}
-        try: 
-            input = json.loads(raw_data)
-        except:
-            self.reply_400("Invalid JSON received")
-            return
+        input = self.parse_input()
 
         # Handle the given command
         if self.path == '/delete':
-            # Validate inputs
-            if not 'token' in input:
-                self.reply_400("Missing token for logout")
-                return
-
-            # Delete user
             try:
-                print('Deleting user with token ' + input['token'])
-                if input['token'] == 'bad':
-                    raise Exception
-            except:
-                self.reply_400('Failed to delete user')
-                return
+                # Get, validate the input
+                token = self.get_token(input)
 
-            # Generate response
-            self.reply_200(None)
+                # Delete the user
+                print('Deleting user with token ' + token)
+                self.requestHandler.deletetion_handler(token)
+
+                # Generate reply
+                self.reply_200(None)
+
+            except Exception as e:
+                self.reply_400(e.args[0])
         
         else:
             self.reply_404()
@@ -142,44 +119,80 @@ class AuthServer(BaseHTTPRequestHandler):
             self.wfile.write(bytes(json.dumps(body), 'utf8'))
 
     def reply_400(self, message):
-        self.send_response(400)
-        self.end_headers
-        response = { 'error-message' : message }
-        self.wfile.write(bytes(json.dumps(response), 'utf8'))
+        self.send_error(400, message)
 
     def reply_404(self):
-        self.send_response(404)
-        self.end_headers
+        self.send_error(404)
 
     
     # Utility Methods
 
-    def validate_email(self, email):
-        # Regex pattern taken from https://emailregex.com
-        return re.match("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email)
+    def parse_input(self):
+        raw_data = self.rfile.read(int(self.headers['Content-Length']))
+        print("Received from client: " + str(raw_data))
+        
+        try: 
+            return json.loads(raw_data)
+        except:
+            return {}
 
-    def validate_password(self, password):
-        # Password should be mimimum of 16 characters
-        if len(password) < 16:
-            return False
+    def get_name(self, input, required = True):
+        if 'name' in input:
+            return input['name']
+        elif required:
+            raise Exception('Unable to retrieve name from input')
+        else:
+            return None
 
-        # Password should contain at least one lowercase letter
-        if len(re.findall("[a-z]", password)) < 1:
-            return False
+    def get_email(self, input, required = True):
+        if 'name' in input:
+            email = input['email']
 
-        # Password should contain at least one uppercase letter
-        if len(re.findall("[A-Z]", password)) < 1:
-            return False
+            # Regex pattern taken from https://emailregex.com
+            if not re.match("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email):
+                raise Exception('Unable to retrieve email from input')
 
-        # Password should contain at least one (unicode) digit
-        if len(re.findall("[\d]", password)) < 1:
-            return False
+            return email
+        elif required:
+            raise Exception('Unable to retrieve email from input')
+        else:
+            return None
 
-        # Password should contain at least one special character
-        if len(re.findall("[,.:;?!@#$%&-_+=]", password)) < 1:
-            return False
+    def get_password(self, input, required = True):
+        if 'password' in input:
+            password = input['password']
 
-        return True
+            # Password should be mimimum of 16 characters
+            if len(password) < 16:
+                raise Exception('Unable to retrieve password from input')
+
+            # Password should contain at least one lowercase letter
+            if len(re.findall("[a-z]", password)) < 1:
+                raise Exception('Unable to retrieve password from input')
+
+            # Password should contain at least one uppercase letter
+            if len(re.findall("[A-Z]", password)) < 1:
+                raise Exception('Unable to retrieve password from input')
+
+            # Password should contain at least one (unicode) digit
+            if len(re.findall("[\d]", password)) < 1:
+                raise Exception('Unable to retrieve password from input')
+
+            # Password should contain at least one special character
+            if len(re.findall("[,.:;?!@#$%&-_+=]", password)) < 1:
+                raise Exception('Unable to retrieve password from input')
+
+            return password
+        elif required:
+            raise Exception('Unable to retrieve password from input')
+        else:
+            return None
+
+    def get_token(self, input):
+        if 'token' in input:
+            return input['token']
+        else:
+            raise Exception('Unable to retrieve token from input')
 
 
 # Main application loop
