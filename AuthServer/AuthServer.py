@@ -80,9 +80,6 @@ class AuthServer(BaseHTTPRequestHandler):
 
             except Exception as e:
                 self.reply_400(e.args[0])
-        
-        else:
-            self.reply_404()
             
     def do_DELETE(self):
         input = self.parse_input()
@@ -102,9 +99,6 @@ class AuthServer(BaseHTTPRequestHandler):
 
             except Exception as e:
                 self.reply_400(e.args[0])
-        
-        else:
-            self.reply_404()
 
     
     # Response Methods
@@ -119,9 +113,6 @@ class AuthServer(BaseHTTPRequestHandler):
 
     def reply_400(self, message):
         self.send_error(400, message)
-
-    def reply_404(self):
-        self.send_error(404)
 
     
     # Utility Methods
