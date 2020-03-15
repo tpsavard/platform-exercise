@@ -13,7 +13,7 @@ class RequestHandler:
         self.userManager.create_user(name, email, password)
 
     def login_handler(self, email, password):
-        if self.userManager.does_user_exist(email, password):
+        if self.userManager.validate_credentials(email, password):
             return self.tokenManager.create_token(email)
         else:
             raise Exception("Invalid credentials provided")
