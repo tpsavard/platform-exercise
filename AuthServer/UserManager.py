@@ -1,4 +1,10 @@
+import sqlite3
+
+# Manages the persistance of user data
 class UserManager:
+
+    def __init__(self, db):
+        self.db = sqlite3.con(db)
 
     def create_user(self, name, email, password):
         pass
