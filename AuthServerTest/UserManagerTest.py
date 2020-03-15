@@ -20,7 +20,7 @@ class UserManagerTest(unittest.TestCase):
         db.commit()
         return db
 
-    def test_create_validate_user(self):
+    def test_create_validate_user_pass(self):
         userManager = UserManager(self.setup_db())
         userManager.create_user('bob', 'bob@foo.bar', 'password')
         self.assertTrue(userManager.validate_credentials('bob@foo.bar', 'password'))
@@ -41,6 +41,26 @@ class UserManagerTest(unittest.TestCase):
     def test_validate_credentials_fail_bad_password(self):
         userManager = UserManager(self.setup_db())
         self.assertFalse(userManager.validate_credentials('alice@foo.bar', 'badpassword'))
+
+    def test_update_user_pass(self):
+        userManager = UserManager(self.setup_db())
+        userManager.update_user('bob', 'alice@foo.bar', 'newpassword')
+        self.assertTrue(userManager.validate_credentials('alice@foo.bar', 'newpassword'))
+
+    def test_update_user_fail_user_does_not_exists(self):
+        userManager = UserManager(self.setup_db())
+        with self.assertRaises(Exception):
+            userManager.update_user('bob', 'bob@foo.bar', 'newpassword')
+    
+    def test_delete_user_pass(self):
+        userManager = UserManager(self.setup_db())
+        userManager.delete_user('alice@foo.bar')
+        self.assertFalse(userManager.validate_credentials('alice@foo.bar', 'password'))
+
+    def test_delete_user_fail_user_does_not_exists(self):
+        userManager = UserManager(self.setup_db())
+        with self.assertRaises(Exception):
+            userManager.delete_user('bob@foo.bar')
 
 if __name__ == '__main__':
     unittest.main()

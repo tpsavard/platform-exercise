@@ -15,20 +15,13 @@ class UserManager:
 
     def create_user(self, name, email, password):
         # Check for the existence of the user
-        cursor = self.db.cursor()
-        cursor.execute('SELECT COUNT(*) FROM Users WHERE Email = ?', (email, ))
-
-        result = cursor.fetchone()
-        if result is None:
-            raise Exception('Unabled to verify if the user already exists')
-        (count, ) = result
-
-        if count > 0:
+        if self.get_user_count(email) > 0:
             raise Exception('User ' + email + ' already exists')
 
         # Insert the new user
         salt = self.get_new_salt()
         hashedPassword = self.hash_password(password, salt)
+        cursor = self.db.cursor()
         cursor.execute('''
             INSERT INTO 
                 Users 
@@ -55,14 +48,50 @@ class UserManager:
         return False
 
     def update_user(self, name, email, password):
-        pass
+        # Check for the existence of the user
+        if self.get_user_count(email) < 1:
+            raise Exception('User ' + email + ' does not already exists')
+
+        # Update the user
+        salt = self.get_new_salt()
+        hashedPassword = self.hash_password(password, salt)
+        cursor = self.db.cursor()
+        cursor.execute('''
+            UPDATE 
+                Users
+            SET
+                Name = ?, PasswordHash = ?, PasswordSalt = ?
+            WHERE 
+                Email = ?''',
+            (name, hashedPassword, salt, email))
+
+        self.db.commit()
 
     def delete_user(self, email):
-        pass
+        # Check for the existence of the user
+        if self.get_user_count(email) < 1:
+            raise Exception('User ' + email + ' does not already exists')
+
+        # Delete the user
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM Users WHERE Email = ?', (email, ))
+
+        self.db.commit()
 
 
     # Utility Methods
 
+    def get_user_count(self, email):
+        cursor = self.db.cursor()
+        cursor.execute('SELECT COUNT(*) FROM Users WHERE Email = ?', (email, ))
+
+        result = cursor.fetchone()
+        if result is None:
+            raise Exception('Unabled to verify if the user already exists')
+        (count, ) = result
+
+        return count
+    
     def get_new_salt(self):
         return codecs.encode(os.urandom(32), 'hex')
 
