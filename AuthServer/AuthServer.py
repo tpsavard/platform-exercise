@@ -1,8 +1,9 @@
 # Simple HTTP server implementation for token-based authentication
 
+import sys
 import json
 import re
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from TokenManager import TokenManager
 from UserManager import UserManager
 from RequestHandler import RequestHandler
@@ -187,9 +188,24 @@ class AuthServer(BaseHTTPRequestHandler):
 
 # Main application loop
 
+if len(sys.argv) < 6:
+    print('Required Args: <host address> <host port> <sqlite file> <SSL key file> <SSL cert file>')
+    exit()
+
+hostaddr = sys.argv[1]
+hostport = sys.argv[2]
+dbfile = sys.argv[3]
+keyfile = sys.argv[4]
+certfile = sys.argv[5]
+
+db = sqlite3.connect(dbfile)
+
 tokenManager = TokenManager()
-userManager = UserManager()
+userManager = UserManager(db)
 requestHandler = RequestHandler(tokenManager, userManager)
 
-server = HTTPServer(('localhost', 8000), AuthServer)
+server = ThreadingHTTPServer((hostaddr, int(hostport)), AuthServer)
+
+server.socket = ssl.wrap_socket(server.socket, keyfile = keyfile, certfile = certfile, server_side = True)
+
 server.serve_forever()
