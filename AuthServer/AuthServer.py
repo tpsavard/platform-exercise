@@ -3,10 +3,12 @@
 import sys
 import json
 import re
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from TokenManager import TokenManager
-from UserManager import UserManager
-from RequestHandler import RequestHandler
+import sqlite3
+import ssl
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from AuthServer.TokenManager import TokenManager
+from AuthServer.UserManager import UserManager
+from AuthServer.RequestHandler import RequestHandler
 
 class AuthServer(BaseHTTPRequestHandler):
 
@@ -28,7 +30,7 @@ class AuthServer(BaseHTTPRequestHandler):
                 requestHandler.registration_handler(name, email, password)
                 
                 # Generate reply
-                self.reply_200(None)
+                self.reply_200()
 
             except Exception as e:
                 self.reply_400(e.args[0])
@@ -59,7 +61,7 @@ class AuthServer(BaseHTTPRequestHandler):
                 requestHandler.logout_handler(token)
 
                 # Generate reply
-                self.reply_200(None)
+                self.reply_200()
 
             except Exception as e:
                 self.reply_400(e.args[0])
@@ -96,7 +98,7 @@ class AuthServer(BaseHTTPRequestHandler):
                 requestHandler.deletetion_handler(token)
 
                 # Generate reply
-                self.reply_200(None)
+                self.reply_200()
 
             except Exception as e:
                 self.reply_400(e.args[0])
@@ -136,7 +138,7 @@ class AuthServer(BaseHTTPRequestHandler):
             return None
 
     def get_email(self, input, required = True):
-        if 'name' in input:
+        if 'email' in input:
             email = input['email']
 
             # Regex pattern taken from https://emailregex.com
@@ -188,6 +190,7 @@ class AuthServer(BaseHTTPRequestHandler):
 
 # Main application loop
 
+# Validate args
 if len(sys.argv) < 6:
     print('Required Args: <host address> <host port> <sqlite file> <SSL key file> <SSL cert file>')
     exit()
@@ -198,14 +201,15 @@ dbfile = sys.argv[3]
 keyfile = sys.argv[4]
 certfile = sys.argv[5]
 
+# Setup DB connection
 db = sqlite3.connect(dbfile)
 
+# Create necessary handler objects
 tokenManager = TokenManager()
 userManager = UserManager(db)
 requestHandler = RequestHandler(tokenManager, userManager)
 
-server = ThreadingHTTPServer((hostaddr, int(hostport)), AuthServer)
-
+# Launch the server
+server = HTTPServer((hostaddr, int(hostport)), AuthServer)
 server.socket = ssl.wrap_socket(server.socket, keyfile = keyfile, certfile = certfile, server_side = True)
-
 server.serve_forever()
