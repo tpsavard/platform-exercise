@@ -135,6 +135,7 @@ class TokenManager:
 
         return userRecord
 
+
 # Record for a single token, including information on its lifespan
 class TokenRecord:
 
@@ -143,6 +144,7 @@ class TokenRecord:
         self.user = user
         self.created = datetime.now()
         self.lastAccessed = datetime.now()
+
 
 # Record for a single user, including the associated tokens and concurrency lock
 class UserRecord:

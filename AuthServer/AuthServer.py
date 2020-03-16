@@ -1,5 +1,3 @@
-# Simple HTTP server implementation for token-based authentication
-
 import sys
 import json
 import re
@@ -10,6 +8,7 @@ from AuthServer.TokenManager import TokenManager
 from AuthServer.UserManager import UserManager
 from AuthServer.RequestHandler import RequestHandler
 
+# Simple HTTP server implementation for token-based authentication
 class AuthServer(BaseHTTPRequestHandler):
 
     # Request Handler Methods
