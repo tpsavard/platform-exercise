@@ -9,7 +9,6 @@ class RequestHandler:
         self.userManager = userManager
 
     def registration_handler(self, name, email, password):
-        self.tokenManager.create_user(email)
         self.userManager.create_user(name, email, password)
 
     def login_handler(self, email, password):

@@ -16,15 +16,6 @@ class TokenManager:
 
     # Token Action Methods
 
-    def create_user(self, email):
-        # Make sure we're not overwriting an existing user
-        if email in self.users:
-            raise Exception('User ' + email + ' already exists')
-
-        # Create the user
-        newUser = UserRecord()
-        self.users[email] = newUser
-
     def create_token(self, email):
         # Acquire lock on user
         userRecord = self.lock_user(email)
@@ -63,6 +54,9 @@ class TokenManager:
         newToken = self.get_new_token()
 
         tokenRecord.token = newToken
+        del self.tokens[oldToken]
+        self.tokens[newToken] = tokenRecord
+
         userRecord.tokens.remove(oldToken)
         userRecord.tokens.add(newToken)
 
@@ -127,7 +121,12 @@ class TokenManager:
     def lock_user(self, email):
         # Acquire lock on user
         userRecord = self.users.get(email)
-        if userRecord is None or not userRecord.lock.acquire(self.__acquisitionTimeout__):
+
+        if userRecord is None:
+            userRecord = UserRecord()
+            self.users[email] = userRecord
+
+        if not userRecord.lock.acquire(self.__acquisitionTimeout__):
             raise Exception('Failed to get lock for user ' + email)
 
         # Revalidate user is available, in case the user was deleted while waiting for the lock
