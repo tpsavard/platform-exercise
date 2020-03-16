@@ -29,6 +29,8 @@ The server requires 5 arguments to launch:
 Once the project has been checked out, it can be launched with the following command:  
 `python3 -m AuthServer.AuthServer localhost 4443 ./AuthServer.db ./key.pem ./cert.pem`
 
+Once launched, a password for the SSL key file will be required. _The password is "password"._
+
 ### Interacting with the Server
 
 Browsers, Postman, or curl can be used to manually interact with the server. Some sample commands are provided below (replace `<token>` with the returned token, where applicable):
