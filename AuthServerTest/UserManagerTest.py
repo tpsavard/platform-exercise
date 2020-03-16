@@ -47,6 +47,16 @@ class UserManagerTest(unittest.TestCase):
         userManager.update_user('bob', 'alice@foo.bar', 'newpassword')
         self.assertTrue(userManager.validate_credentials('alice@foo.bar', 'newpassword'))
 
+    def test_update_user_pass_name_only(self):
+        userManager = UserManager(self.setup_db())
+        userManager.update_user('bob', 'alice@foo.bar', None)
+        self.assertTrue(userManager.validate_credentials('alice@foo.bar', 'password'))
+
+    def test_update_user_pass_password_only(self):
+        userManager = UserManager(self.setup_db())
+        userManager.update_user(None, 'alice@foo.bar', 'newpassword')
+        self.assertTrue(userManager.validate_credentials('alice@foo.bar', 'newpassword'))
+
     def test_update_user_fail_user_does_not_exists(self):
         userManager = UserManager(self.setup_db())
         with self.assertRaises(Exception):

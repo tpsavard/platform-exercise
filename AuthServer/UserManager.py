@@ -52,18 +52,35 @@ class UserManager:
         if self.get_user_count(email) < 1:
             raise Exception('User ' + email + ' does not already exists')
 
+        # Define the update values
+        setSQL = None
+        newValues = None
+        if email is None and password is None:
+            return
+        elif password is None:
+            setSQL = 'Name = ?'
+            newValues = (name, email)
+        elif name is None:
+            salt = self.get_new_salt()
+            hashedPassword = self.hash_password(password, salt)
+            setSQL = 'PasswordHash = ?, PasswordSalt = ?'
+            newValues = (hashedPassword, salt, email)
+        else:
+            salt = self.get_new_salt()
+            hashedPassword = self.hash_password(password, salt)
+            setSQL = 'Name = ?, PasswordHash = ?, PasswordSalt = ?'
+            newValues = (name, hashedPassword, salt, email)
+        
         # Update the user
-        salt = self.get_new_salt()
-        hashedPassword = self.hash_password(password, salt)
         cursor = self.db.cursor()
         cursor.execute('''
             UPDATE 
                 Users
             SET
-                Name = ?, PasswordHash = ?, PasswordSalt = ?
+                %s
             WHERE 
-                Email = ?''',
-            (name, hashedPassword, salt, email))
+                Email = ?''' % setSQL,
+            newValues)
 
         self.db.commit()
 
